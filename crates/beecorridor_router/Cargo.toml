@@ -1,0 +1,15 @@
+[package]
+name = "beecorridor_router"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "BeeCorridorRouter: routes human tasks through hive-safe eco corridors."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+rand = { workspace = true }
+hive_guard = { path = "../hive_guard" }
+ecosocialbee_core = { path = "../ecosocialbee_core" }
