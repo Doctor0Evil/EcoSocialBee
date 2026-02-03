@@ -1,0 +1,24 @@
+{
+  "$schema": "https://aln.ecosocialbee.org/schema/v1",
+  "shard_id": "qpudatashards/particles/HiveEcoEnvelope2026v1.aln",
+  "title": "HiveEcoEnvelope2026v1",
+  "description": "Safe bands for hive temperature, toxins, forage diversity, mapped to EcoImpactScoreForHiveCorridor.",
+  "version": "1.0.0",
+  "kind": "HiveEcoEnvelope",
+  "fields": {
+    "hive_id": { "type": "string" },
+    "safe_temperature_c_min": { "type": "number" },
+    "safe_temperature_c_max": { "type": "number" },
+    "safe_toxin_ppb_max": { "type": "number" },
+    "safe_forage_diversity_index_min": { "type": "number", "min": 0, "max": 1 },
+    "safe_forage_radius_m_min": { "type": "number", "min": 0 },
+    "eco_band": { "type": "string", "enum": ["SAFE", "WARNING", "CRITICAL"] },
+    "eco_impact_score_corridor_min": { "type": "number" },
+    "eco_impact_score_corridor_max": { "type": "number" }
+  },
+  "invariants": {
+    "temperature_band_consistent": "safe_temperature_c_min < safe_temperature_c_max",
+    "forage_radius_positive": "safe_forage_radius_m_min >= 0",
+    "eco_corridor_monotone": "eco_impact_score_corridor_min <= eco_impact_score_corridor_max"
+  }
+}
