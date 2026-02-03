@@ -1,0 +1,12 @@
+[package]
+name = "ecosocialbee_core"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "EcoSocialBee core types: EcoImpactScore, HeatRiskIndex, and human eco-proxy metrics."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
