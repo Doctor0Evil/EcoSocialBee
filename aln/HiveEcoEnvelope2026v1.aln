@@ -16,6 +16,7 @@
     "eco_impact_score_corridor_min": { "type": "number" },
     "eco_impact_score_corridor_max": { "type": "number" }
   },
+  "aln_particle": "aln particle hive.metrics.envelope.v1\n  field hive_id string\n  field region string\n  -- Bee-centric metrics\n  field hive_temperature_c f64\n  field brood_temperature_c f64\n  field hive_humidity_pct f64\n  field nectar_kg f64\n  field pollen_kg f64\n  field forager_load_pct f64\n  field toxin_index_air f64\n  field toxin_index_wax f64\n  field forage_radius_km f64\n  field eco_band string -- \"safe\" | \"warning\" | \"critical\"\n\n  -- Triad scores\n  field knowledgefactor01 f64\n  field ecoimpact01 f64\n  field riskofharm01 f64\n\n  -- Residual and risk coordinates\n  field vt_residual f64\n  field r_temp01 f64\n  field r_toxin_air01 f64\n  field r_toxin_wax01 f64\n  field r_forage01 f64\nend\n\naln contract invariant.hive_corridor_ok(m hive.metrics.envelope.v1)\n  bool\n    m.r_temp01      <= 1.0 &&\n    m.r_toxin_air01 <= 1.0 &&\n    m.r_toxin_wax01 <= 1.0 &&\n    m.r_forage01    <= 1.0\nend\n\naln contract invariant.hive_residual_nonincreasing(vt f64, vtp1 f64)\n  bool vtp1 <= vt\nend\n",
   "invariants": {
     "temperature_band_consistent": "safe_temperature_c_min < safe_temperature_c_max",
     "forage_radius_positive": "safe_forage_radius_m_min >= 0",
