@@ -1,0 +1,25 @@
+{
+  "$schema": "https://aln.ecosocialbee.org/schema/v1",
+  "shard_id": "qpudatashards/governance/NeurorightsForBeesTemplate2026v1.aln",
+  "title": "Neurorights-for-Bees Template 2026 v1",
+  "kind": "GovernanceTemplate",
+  "principles": [
+    "Bees are primary rights-holders in any Cybernetical-Honeybees system.",
+    "No direct bee neural or body-level actuation fields may appear in any schema.",
+    "Bee telemetry is observational-only and cannot be used to justify harm."
+  ],
+  "prohibited_fields": [
+    "bee_neural_stimulation_current",
+    "bee_locmotion_control_vector",
+    "hive_forced_heating_watts"
+  ],
+  "required_invariants": [
+    "no_negative_externalization_to_bees",
+    "no_bridge_to_biology",
+    "eco_impact_monotone_non_decreasing"
+  ],
+  "rollback_policies": {
+    "on_violation": "immediate_rollback_and_blacklist",
+    "export_restriction": "no_export_of_bee_telemetry_to_non_compliant_systems"
+  }
+}
