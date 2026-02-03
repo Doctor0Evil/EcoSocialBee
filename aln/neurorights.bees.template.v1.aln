@@ -1,0 +1,16 @@
+aln particle neurorights.bees.template.v1
+  field species string        -- "apis_mellifera"
+  field non_commodification bool
+  field no_neuro_actuation bool
+  field no_behavior_forcing bool
+  field primacy_of_ecorights bool
+  field human_pain_fields_tag string -- "human_only_nontransferable"
+end
+
+aln contract invariant.no_bridge_to_bee_biology(p neurorights.bees.template.v1)
+  bool
+    p.non_commodification == true &&
+    p.no_neuro_actuation  == true &&
+    p.no_behavior_forcing == true &&
+    p.primacy_of_ecorights == true
+end
