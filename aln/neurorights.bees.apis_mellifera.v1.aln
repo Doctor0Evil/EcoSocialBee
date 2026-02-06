@@ -1,0 +1,7 @@
+aln,neurorights,apis_mellifera,v1
+metric,domain,module,op,threshold,unit,mode,source
+roh_bee,bee,bee_corridor_guard,,0.10,arb,Any,file-bee-ethology
+hive_temp,hive,bee_corridor_guard,,36.0,degC,Max,file-apiculture-temps
+hive_temp,hive,bee_corridor_guard,>=,32.0,degC,Min,file-apiculture-temps
+flight_density,bee,ue5-visualizer,,0.80,fraction,Max,file-bee-swarm-density
+sim_only_flag,bee,ue5-visualizer,,1,bool,Any,file-bostrom-kernel
