@@ -1,0 +1,4 @@
+nodeid,timestamp_iso,pm25_ug_m3,nox_ppb,o3_ppb,voc_ug_m3,temp_C,floral_m2_ha,cin_vector,cout_vector,q_m3_s,window_s,r_bee,pm25_eq_ug_m3,region_class,duty_scale,allow_foraging,ecoimpactscore
+PHX-APIARY-001,2026-02-10T14:00:00Z,6.2,19.0,38.0,9.5,29.0,420.0,"[6.2,19.0,38.0,9.5]","[5.8,18.0,36.0,8.7]",0.85,60,0.33,7.9,FORAGE_SAFE,1.0,true,0.91
+PHX-APIARY-001,2026-02-10T14:01:00Z,10.5,32.0,61.0,16.2,33.0,410.0,"[10.5,32.0,61.0,16.2]","[9.8,30.0,57.0,15.0]",0.86,60,0.71,12.8,RETREAT_ONLY,0.42,false,0.77
+PHX-APIARY-001,2026-02-10T14:02:00Z,18.9,54.0,88.0,24.1,39.0,380.0,"[18.9,54.0,88.0,24.1]","[18.9,54.0,88.0,24.1]",0.84,60,1.21,22.3,FORBIDDEN,0.0,false,0.00
