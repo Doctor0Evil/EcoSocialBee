@@ -1,0 +1,228 @@
+SECTION,NEUROMORPH-SUBJECTS-V1
+
+; Distinguish human vs honeybee neuromorphic subjects, with separate RoH/envelope models.
+
+ENUM,SubjectKind
+  HumanOrganicallyIntegratedAugmentedCitizen
+  HoneybeeColony
+
+RECORD,SubjectId
+  subject_kind  SubjectKind
+  subject_hex   HexString32        ; pseudonymous ID, not raw biometric
+
+RECORD,HumanRoHModelRef
+  roh_model_shard   FileRef        ; e.g. human.rohmodel.aln
+  envelope_shard    FileRef        ; e.g. human.biophysical-envelope.aln
+  roh_ceiling       Float          ; MUST == 0.30 for CapControlledHuman
+
+RECORD,HoneybeeRoHModelRef
+  roh_model_shard   FileRef        ; e.g. honeybee.rohmodel.aln
+  envelope_shard    FileRef        ; e.g. honeybee.biophysical-envelope.aln
+  roh_ceiling       Float          ; bee-specific conservative ceiling
+
+RECORD,NeuromorphSubjectConfig
+  subject          SubjectId
+  human_roh        Optional<HumanRoHModelRef>
+  honeybee_roh     Optional<HoneybeeRoHModelRef>
+
+INVARIANT,NeuromorphSubjectConfig
+  ; Human subject MUST NOT use honeybee RoH model, and vice versa.
+  IF subject.subject_kind == HumanOrganicallyIntegratedAugmentedCitizen
+     THEN honeybee_roh IS NONE
+  IF subject.subject_kind == HoneybeeColony
+     THEN human_roh IS NONE
+
+; ------------------------------------------------------------------------
+
+SECTION,FEAR-DROPLET-OBJECTS-V1
+
+; FEAR/PAIN projections already exist in Tree-of-Life diagnostics.
+; Here we define diagnostic-only “droplets” and “objects” with provenance.
+
+RECORD,FearDropletId
+  droplet_hex   HexString32        ; hash over subject, epoch, tree-of-life view
+
+RECORD,FearDroplet
+  droplet_id    FearDropletId
+  subject       SubjectId
+  epoch_index   UInt64             ; TreeOfLife epoch index
+  fear_level    Float              ; 0.0–1.0 from TREE.FEAR
+  pain_level    Float              ; 0.0–1.0 from TREE.PAIN
+  decay         Float              ; 0.0–1.0 DECAY = RoH / 0.3
+  lifeforce     Float              ; 0.0–1.0 LIFEFORCE = 1.0 - DECAY
+  wave          Float              ; 0.0–1.0 WAVE composite
+  roh_value     Float              ; underlying RoH at epoch
+  roh_ceiling   Float              ; 0.30 for human CapControlledHuman
+  consent_state ConsentState       ; imported from ALN core
+  capability    CapabilityState    ; imported from ALN core
+
+INVARIANT,FearDroplet
+  roh_value >= 0.0
+  roh_value <= roh_ceiling
+  decay == roh_value / roh_ceiling
+  lifeforce == 1.0 - decay
+
+ENUM,FearObjectScope
+  ResearchDiagnosticOnly
+  TrainingSignalForHumanOnly       ; never for honeybee
+  GovernanceFairnessLabel
+
+RECORD,FearObjectId
+  object_hex   HexString32         ; hash over ordered droplet list + metadata
+
+RECORD,FearObject
+  object_id        FearObjectId
+  subject          SubjectId
+  scope            FearObjectScope
+  droplet_ids      List<FearDropletId>
+  created_at_ts    Timestamp
+  created_by_role  Role
+  created_in_juris Jurisdiction
+  consent_state    ConsentState    ; CONSENTEXTENDED required for TrainingSignalForHumanOnly
+  evidence_bundle  Optional<EvidenceBundleId>
+
+INVARIANT,FearObject
+  ; Honeybee colonies may never be targets of TrainingSignal scope.
+  IF subject.subject_kind == HoneybeeColony
+     THEN scope != TrainingSignalForHumanOnly
+
+  ; TrainingSignal scope requires strong, active human consent.
+  IF scope == TrainingSignalForHumanOnly
+     THEN consent_state == ConsentExtended
+
+  ; All referenced droplets must belong to the same subject.
+  FORALL d IN droplet_ids:
+     FearDroplet[d].subject == subject
+
+POLICY,FearObjectNonActuation
+  ; FearObjects are strictly diagnostic / labeling artefacts.
+  ; They MUST NOT appear in capability, reversal, or consent transition logic.
+  FORBID-USE,FearObject
+    IN CapabilityTransitionRequest
+    IN ReversalConditions
+    IN ConsentTransitionRules
+
+; ------------------------------------------------------------------------
+
+SECTION,NATURE-PREDICATES-VOLUNTARY-COERCED-V1
+
+; Classify windows of TREE assets into VOLUNTARY_STRESS vs COERCED_STRESS.
+
+ENUM,NaturePredicate
+  CALM_STABLE
+  OVERLOADED
+  UNFAIR_DRAIN
+  RECOVERY
+  VOLUNTARY_STRESS
+  COERCED_STRESS
+
+RECORD,NatureWindow
+  subject        SubjectId
+  start_epoch    UInt64
+  end_epoch      UInt64
+  mean_fear      Float      ; windowed mean TREE.FEAR
+  mean_pain      Float      ; windowed mean TREE.PAIN
+  mean_decay     Float      ; windowed mean DECAY
+  has_unfair     Bool       ; true if UNFAIR_DRAIN fired in window
+  has_overload   Bool       ; true if OVERLOADED fired in window
+  consent_state  ConsentState
+  capability     CapabilityState
+
+RECORD,NatureClassification
+  window     NatureWindow
+  predicate  NaturePredicate
+
+RULE,ClassifyVoluntaryStress
+  INPUT NatureWindow w
+  OUTPUT NatureClassification c
+  WHEN
+    w.mean_fear >= 0.3
+    AND w.mean_pain >= 0.3
+    AND w.consent_state == ConsentExtended
+    AND NOT w.has_unfair
+  SET
+    c.window    = w
+    c.predicate = VOLUNTARY_STRESS
+
+RULE,ClassifyCoercedStress
+  INPUT NatureWindow w
+  OUTPUT NatureClassification c
+  WHEN
+    w.mean_fear >= 0.3
+    AND w.mean_pain >= 0.3
+    AND (w.has_unfair OR w.consent_state == ConsentNone OR w.consent_state == ConsentRevoked)
+  SET
+    c.window    = w
+    c.predicate = COERCED_STRESS
+
+; All other windows remain in existing CALM_STABLE/OVERLOADED/UNFAIR_DRAIN/RECOVERY predicates,
+; computed in your existing NATURE shards.
+
+; ------------------------------------------------------------------------
+
+SECTION,EVOLUTION-GUARDS-HUMAN-VS-HONEYBEE-V1
+
+; Guard evolution / capability upgrades so they never depend on coercive stress,
+; and never mix human and honeybee lattices.
+
+POLICY,SeparateHumanHoneybeeCapabilityLattices
+  ; No capability transition for a human may read honeybee TREE assets,
+  ; and no honeybee transition may read human TREE assets.
+  FORBID-CROSS-SUBJECT-INPUT
+    source_kind HumanOrganicallyIntegratedAugmentedCitizen
+    target_kind HoneybeeColony
+
+  FORBID-CROSS-SUBJECT-INPUT
+    source_kind HoneybeeColony
+    target_kind HumanOrganicallyIntegratedAugmentedCitizen
+
+POLICY,HumanEvolutionRequiresSafeWindows
+  ; For human subjects, positive capability upgrades must originate
+  ; from CALM_STABLE or RECOVERY windows, not from OVERLOADED/UNFAIR_DRAIN
+  ; and never from COERCED_STRESS.
+  INPUT CapabilityTransitionRequest req
+  INPUT NatureClassification nat
+  WHEN
+    req.to > req.from
+    AND req.subject.subject_kind == HumanOrganicallyIntegratedAugmentedCitizen
+  ENFORCE
+    nat.window.subject == req.subject
+    nat.window.end_epoch <= req.decision_epoch
+    nat.predicate IN { CALM_STABLE, RECOVERY, VOLUNTARY_STRESS }
+    ; Explicitly forbid coerced or unfair trajectories as prerequisites.
+    nat.predicate NOT IN { COERCED_STRESS }
+    ; OVERLOADED / UNFAIR_DRAIN windows MUST NOT be sole justification.
+    NOT (nat.predicate IN { OVERLOADED, UNFAIR_DRAIN })
+
+POLICY,HoneybeeSafetyFirst
+  ; Honeybee colonies are strictly diagnostic in this stack:
+  ; no capability upgrades that alter bee behavior or evolution paths.
+  INPUT CapabilityTransitionRequest req
+  WHEN
+    req.subject.subject_kind == HoneybeeColony
+  ENFORCE
+    ; Only MODELONLY and LABBENCH analysis allowed, never CONTROLLEDHUMAN/GENERALUSE.
+    req.to <= CapLabBench
+
+; ------------------------------------------------------------------------
+
+SECTION,FearObjectUsage-Constraints-V1
+
+; Allow use of FearObjects only in diagnostic / fairness / research contexts.
+
+ENUM,FearObjectUseContext
+  DiagnosticReport
+  FairnessAudit
+  ResearchOfflineModeling
+
+POLICY,FearObjectAllowedUse
+  INPUT FearObject fo
+  INPUT FearObjectUseContext ctx
+  ENFORCE
+    ; FearObjects may appear only in reports, audits, and offline modeling.
+    ctx IN { DiagnosticReport, FairnessAudit, ResearchOfflineModeling }
+
+POLICY,FearObjectForbiddenInLiveCoupling
+  ; FearObjects MUST NOT be consulted at live-coupling decision points.
+  FORBID-USE,FearObject
+    IN OperationContext.can_live_couple
